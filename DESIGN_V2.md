@@ -1,0 +1,488 @@
+# claude-history v2.0 技術設計書
+
+## 概要
+v2.0はv1.0の基盤の上に、生産性を向上させる高度な機能を追加します。
+
+## v2.0で追加される外部依存ライブラリ
+
+（v1.0の依存関係に追加なし。drizzle-orm、p-limitはv1.0に含まれています）
+
+## v2.0で追加されるモジュール
+
+v1.0のMonorepo構成（DESIGN_V1.md参照）に以下を追加：
+
+```
+packages/
+├── @cchistory/core/
+│   └── src/
+│       ├── search/
+│       │   └── history/         # 検索履歴機能（v2.0新機能）
+│       │       ├── service.ts   # 履歴管理サービス
+│       │       └── repository.ts # 履歴データアクセス
+│       ├── sync/                # 同期機能（v2.0新機能）
+│       │   ├── service.ts       # 差分同期サービス
+│       │   └── detector.ts      # 変更検出
+│       └── filters/             # 除外フィルタ（v2.0新機能）
+│           └── exclude.ts       # 除外ロジック
+│
+└── @cchistory/cli/
+    └── src/
+        └── commands/
+            ├── sync/            # syncコマンド（v2.0新機能）
+            │   └── index.ts
+            └── history/         # historyコマンド（v2.0新機能）
+                └── index.ts
+```
+
+## v2.0で追加される主要インターフェース
+
+```typescript
+// v1.0のインターフェースに追加
+
+export interface SearchOptions {
+  // v1.0の項目に追加
+  excludeProjects?: string[];
+  excludeSessions?: string[];
+  excludeBefore?: Date;
+  excludePatterns?: string[];
+}
+
+export interface SearchHistoryEntry {
+  id: number;
+  query: string;
+  mode: string;
+  options: SearchOptions;
+  resultCount: number;
+  executionTimeMs: number;
+  executedAt: Date;
+}
+```
+
+## v2.0で追加されるデータベーステーブル
+
+```sql
+-- 検索履歴
+CREATE TABLE search_history (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    query TEXT NOT NULL,
+    mode TEXT NOT NULL,
+    options TEXT,  -- JSON形式
+    result_count INTEGER NOT NULL,
+    execution_time_ms INTEGER,
+    embedding_model TEXT,
+    error_message TEXT,
+    executed_at DATETIME DEFAULT CURRENT_TIMESTAMP
+);
+
+-- 検索履歴インデックス
+CREATE INDEX idx_search_history_executed_at ON search_history(executed_at DESC);
+CREATE INDEX idx_search_history_query ON search_history(query);
+
+-- 同期状態
+CREATE TABLE sync_state (
+    project_name TEXT PRIMARY KEY,
+    last_sync_at DATETIME NOT NULL,
+    last_file_count INTEGER
+);
+```
+
+## 主要機能の実装方針
+
+### 1. 検索履歴機能
+
+#### データ保存
+- 検索実行後、非同期でバックグラウンド保存
+- 保存内容: クエリ、モード、オプション、結果数、実行時間
+- プライバシー設定に基づいて特定パターンを除外
+
+#### 履歴管理
+- 保存期間: 90日（設定可能）
+- 最大保存数: 1000件（設定可能）
+- 古いエントリは自動削除
+
+#### CLI機能
+```bash
+# 履歴表示
+cchistory history                    # 最新10件
+cchistory history --limit 20         # 件数指定
+cchistory history --frequent         # 頻出クエリ
+
+# 履歴から再実行
+cchistory history --run 5            # 番号指定
+cchistory history --interactive      # 対話的選択
+
+# 履歴管理
+cchistory history --clear            # 全削除
+cchistory history --delete 5         # 特定削除
+cchistory history --export file.json # エクスポート
+```
+
+#### インタラクティブモード
+- 矢印キーで選択
+- Enterで実行
+- 部分一致でフィルタリング
+
+### 2. 除外フィルタ機能
+
+#### フィルタ適用タイミング
+- **インデックス作成時**: 永続的な除外（ストレージ節約）
+- **検索時**: 動的な除外（一時的なフィルタ）
+
+#### フィルタ種類
+1. **プロジェクト名**: ワイルドカード対応（`test-*`）
+2. **セッションID**: 完全一致
+3. **期間**: 特定日付以前を除外
+4. **内容パターン**: 正規表現マッチング
+
+#### CLI機能
+```bash
+# 除外オプション
+cchistory "query" --exclude-project "test-*,tmp-*"
+cchistory "query" --exclude-session "uuid1,uuid2"
+cchistory "query" --exclude-before "2024-01-01"
+cchistory "query" --exclude-pattern "password|secret"
+```
+
+### 3. 同期機能（syncコマンド）
+
+#### 差分検出
+1. sync_stateテーブルから前回同期時刻を取得
+2. ファイルシステムをスキャンして新規・更新ファイルを検出
+3. 変更があったファイルのみ処理
+
+#### 同期処理
+- 新規メッセージのみを抽出
+- バッチでベクトル化
+- データベースに追加
+
+#### 自動同期
+- 検索実行時にチェック（設定で無効化可能）
+- 前回同期から指定時間経過時のみ実行
+
+#### CLI機能
+```bash
+# 手動同期
+cchistory sync
+
+# 特定プロジェクトのみ同期
+cchistory sync --project "project-name"
+
+# 強制再インデックス
+cchistory sync --force
+```
+
+### 4. v2.0テーブルのマイグレーション
+
+v1.0からDrizzle ORMを使用しているため、v2.0の新テーブル追加は通常のマイグレーションとして実装します。
+
+#### v2.0で追加されるスキーマ定義
+```typescript
+// storage/schema/search-history.ts
+import { sqliteTable, text, integer, index } from 'drizzle-orm/sqlite-core';
+import { sql } from 'drizzle-orm';
+
+export const searchHistory = sqliteTable('search_history', {
+  id: integer('id').primaryKey({ autoIncrement: true }),
+  query: text('query').notNull(),
+  mode: text('mode').notNull(),
+  options: text('options'), // JSON形式
+  resultCount: integer('result_count').notNull(),
+  executionTimeMs: integer('execution_time_ms'),
+  embeddingModel: text('embedding_model'),
+  errorMessage: text('error_message'),
+  executedAt: integer('executed_at', { mode: 'timestamp' })
+    .notNull()
+    .default(sql`CURRENT_TIMESTAMP`)
+}, (table) => ({
+  executedAtIdx: index('idx_search_history_executed_at').on(table.executedAt),
+  queryIdx: index('idx_search_history_query').on(table.query)
+}));
+
+export const syncState = sqliteTable('sync_state', {
+  projectName: text('project_name').primaryKey(),
+  lastSyncAt: integer('last_sync_at', { mode: 'timestamp' }).notNull(),
+  lastFileCount: integer('last_file_count')
+});
+```
+
+## v2.0の設定ファイル拡張
+
+```yaml
+# 既存の設定に追加
+
+# 検索履歴設定
+search_history:
+  enabled: true
+  retention_days: 90
+  max_entries: 1000
+  save_options: true
+  exclude_patterns:
+    - "password"
+    - "secret"
+    - "token"
+  auto_suggest: true
+  suggest_threshold: 0.7
+
+# 同期設定
+sync:
+  auto_sync: true
+  sync_interval: 3600  # 秒
+
+# 除外設定（検索時も適用可能に）
+exclude:
+  enabled: true
+  apply_on_search: false  # trueで検索時も適用
+```
+
+## パフォーマンス最適化
+
+### 検索履歴の最適化
+- 頻繁なクエリはメモリキャッシュ
+- 統計情報は定期的に集計
+- インデックスによる高速検索
+
+### 同期の最適化
+- 差分のみ処理
+- バックグラウンド実行
+- プログレッシブな更新
+
+## 移行パス（v1→v2）
+
+### データベース移行
+1. v1のデータベースをバックアップ
+2. Drizzleマイグレーションで新テーブル追加
+3. 既存データはそのまま利用可能
+
+### 設定ファイル移行
+1. v1の設定を読み込み
+2. v2の新規項目はデフォルト値を使用
+3. 自動的に新フォーマットに変換
+
+### 後方互換性
+- v1のCLIコマンドは全て動作
+- 新機能はオプトイン
+- 段階的な移行が可能
+
+## 実装優先順位
+
+1. **Drizzle ORM統合**
+   - スキーマ定義
+   - マイグレーション設定
+   - 既存コードの移行
+
+2. **検索履歴機能**
+   - データ保存ロジック
+   - 履歴管理コマンド
+   - インタラクティブUI
+
+3. **同期機能**
+   - 差分検出ロジック
+   - syncコマンド実装
+   - 自動同期機能
+
+4. **除外フィルタ**
+   - フィルタロジック実装
+   - CLIオプション追加
+   - 設定ファイル対応
+
+## テスト戦略
+
+### 新機能のテスト
+- 検索履歴の保存・取得テスト
+- 同期機能の差分検出テスト
+- 除外フィルタの動作テスト
+
+### 互換性テスト
+- v1データベースからの移行テスト
+- 設定ファイルの自動変換テスト
+- CLIコマンドの後方互換性テスト
+
+## リリース計画
+
+### v2.0-beta
+- Drizzle ORM統合
+- 検索履歴機能
+- 限定ユーザーでテスト
+
+### v2.0-rc
+- 同期機能追加
+- 除外フィルタ実装
+- パフォーマンス最適化
+
+### v2.0 正式版
+- 全機能の安定化
+- ドキュメント完備
+- 移行ガイド提供
+
+## パフォーマンス最適化詳細
+
+### 並行処理戦略
+
+#### バッチ処理の最適化
+- **埋め込み生成**: 100件ずつバッチ化（API制限とのバランス）
+- **並行度制御**: p-limitで最大5並行（メモリとCPUのバランス）
+- **データベース書き込み**: 1000件ごとのトランザクション
+
+#### 大規模データ対応
+- 10,000セッション以上の場合はストリーミング処理に切り替え
+- プロジェクト単位で処理を分割
+- メモリ使用量が1GBを超えたら一時停止してGC実行
+
+### 検索パフォーマンス
+
+#### インデックス戦略
+- ベクトル検索: sqlite-vecのANNインデックスを活用
+- キーワード検索: FTS5の最適化設定
+- 頻繁にアクセスされるカラムに複合インデックスを作成
+
+#### キャッシュ戦略
+- 検索結果のメモリキャッシュ（5分間）
+- 設定ファイルの読み込み結果をキャッシュ
+- 埋め込み生成結果の一時キャッシュ（重複排除）
+
+## 新機能の詳細設計
+
+### 除外フィルタ機能詳細
+
+#### フィルタの適用方式
+- **インデックス時除外**: 設定ファイルの永続的な除外設定を適用
+- **検索時除外**: コマンドラインオプションで動的に除外
+
+#### フィルタ処理の実装
+- **プロジェクト名フィルタ**: ワイルドカード（`*`）をサポート、大文字小文字を無視
+- **セッションフィルタ**: UUID完全一致
+- **期間フィルタ**: タイムスタンプベースの比較
+- **内容パターンフィルタ**: 正規表現でメッセージ内容をチェック
+
+#### パフォーマンスへの配慮
+- インデックス時の除外でストレージ使用量を削減
+- 検索時はSQLのWHERE句で効率的にフィルタリング
+
+### 検索履歴機能詳細
+
+#### データ保存設計
+- **search_historyテーブル**: 個別の検索記録
+- **search_history_statsテーブル**: 集計情報（高速な頻度計算用）
+- 非同期でバックグラウンド保存（検索レスポンスに影響しない）
+
+#### 履歴管理機能
+- **自動削除**: 保存期間（90日）と最大件数（1000件）で制限
+- **プライバシー保護**: 特定パターンの検索は履歴に保存しない
+- **統計情報更新**: トリガーで自動的に集計テーブルを更新
+
+#### インタラクティブ選択
+- 矢印キーで履歴を選択
+- Enterで実行、Escでキャンセル
+- 部分一致によるフィルタリング
+
+### 検索サジェスト機能
+
+#### サジェストアルゴリズム
+1. 入力文字列で部分一致検索
+2. 使用頻度でソート
+3. 最近使用したものを優先
+4. 類似度スコアが闾値（0.7）以上のものを表示
+
+#### リアルタイム表示
+- 入力中に候補を表示（デバウンス処理）
+- Tab/矢印キーで候補選択
+- 選択した履歴の元のオプションも復元
+
+## エラーハンドリング詳細
+
+### エラー分類と対処
+
+#### ファイルシステムエラー
+- **ファイル読み込みエラー**: ログに記録してスキップ、処理を継続
+- **アクセス権限エラー**: 警告表示してスキップ
+- **ディレクトリ不在**: エラーメッセージ表示して処理中断
+
+#### データベースエラー
+- **接続エラー**: 再接続を3回試行、失敗時は終了
+- **ロックエラー**: 1秒待機して3回リトライ
+- **破損エラー**: 再初期化の選択肢を提示
+
+#### API関連エラー
+- **認証エラー**: APIキーの再入力を促す
+- **レート制限**: 指数バックオフでリトライ（最大3回）
+- **ネットワークエラー**: 即座にリトライ（最大3回）
+
+### ユーザーフレンドリーなエラー表示
+
+#### エラーメッセージの原則
+- 技術的な詳細は隠蔽し、ユーザーが理解できる言葉で説明
+- 可能な限り解決方法を提示
+- エラーコードを含めて、詳細なトラブルシューティングを可能に
+
+#### エラー表示例
+```
+Error: Unable to connect to OpenAI API (CCH-API-001)
+Please check your internet connection and API key.
+Run 'cchistory init' to reconfigure your API key.
+```
+
+## CLI実装（v2.0 拡張機能）
+
+### コマンド構成
+
+#### メインコマンド（検索）の拡張
+- v1.0のオプションに加えて:
+  - `--exclude-*`: 除外フィルタ（要件定義書の新機能）
+
+#### 追加サブコマンド
+- `cchistory sync`: 差分更新
+- `cchistory history`: 検索履歴の管理（要件定義書の新機能）
+
+### ユーザー体験の設計
+
+#### プログレス表示（拡張）
+- 大量データ処理時は推定残り時間を表示
+
+#### インタラクティブ機能（拡張）
+- 検索履歴からの選択的再実行
+
+## パッケージ構成
+
+v2.0では追加の依存関係はありません。パッケージ構成の詳細についてはDESIGN_V1.mdを参照してください。
+
+## 段階的リリース戦略
+
+### Phase 1: v1.0 MVP（2-3週間）
+1. セマンティック検索を含む基本機能を実装
+2. 最小限の機能でリリース
+3. ユーザーフィードバック収集
+
+### Phase 2: v1.5 改善版（1-2週間）
+1. v1.0のバグ修正
+2. パフォーマンス最適化
+3. UX改善
+
+### Phase 3: v2.0 拡張版（4-6週間）
+1. 検索履歴機能追加
+2. 除外フィルタ実装
+3. 同期機能追加
+4. 高度な機能を順次追加
+
+## リスク管理
+
+### v1.0のリスク
+- **機能不足**: 限定機能でユーザーが満足するか
+- **対策**: 高速で正確なハイブリッド検索を実現
+
+### v2.0のリスク
+- **複雑性**: 機能が多すぎて使いづらくなる
+- **対策**: デフォルト設定で簡単に使えるようにする
+- **APIコスト**: OpenAI API使用によるコスト
+- **対策**: ローカル埋め込みオプションも提供
+
+## 成功指標
+
+### v1.0
+- インストール数: 100+
+- 基本的な検索5秒以内に完了
+- バグレポート: 重大なもの0件
+
+### v2.0
+- アクティブユーザー: 500+
+- セマンティック検索の満足度: 80%以上
+- 検索履歴機能の利用率: 50%以上
