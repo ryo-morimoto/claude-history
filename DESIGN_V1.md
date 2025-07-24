@@ -47,113 +47,105 @@ v1.0（MVP）はAIを活用したセマンティック検索を含む最小限�
 - **tsx**: TypeScript実行環境
 - **@types/node**: Node.js型定義
 - **@types/better-sqlite3**: better-sqlite3型定義
-- **eslint**: リンター
-- **prettier**: フォーマッター
+- **oxlint**: 高速なRust製リンター
+- **@biomejs/biome**: 高速なRust製フォーマッター・リンター
 - **vitest**: テストフレームワーク
 
 ## モジュール構成
 
-### Monorepo構成（機能ベース）
+### シングルパッケージ構成（機能ベース）
 
 ```
-packages/
-├── core/                         # コア機能パッケージ (@cchistory/core)
-│   ├── src/
-│   │   ├── search/               # 検索機能
-│   │   │   ├── semantic/         # セマンティック検索
-│   │   │   │   ├── embedder.ts  # 埋め込み生成
-│   │   │   │   └── searcher.ts  # ベクトル類似度検索
-│   │   │   ├── keyword/          # キーワード検索
-│   │   │   │   └── fts.ts       # FTS5全文検索
-│   │   │   ├── hybrid/           # ハイブリッド検索
-│   │   │   │   └── merger.ts    # 結果マージロジック
-│   │   │   └── index.ts          # 検索API統合
-│   │   │
-│   │   ├── indexing/             # インデックス作成機能
-│   │   │   ├── parser/           # データパーサー
-│   │   │   │   └── jsonl.ts     # jsonlファイル解析
-│   │   │   ├── embedder/         # 埋め込み生成
-│   │   │   │   └── openai.ts    # OpenAI API連携
-│   │   │   ├── builder/          # インデックスビルダー
-│   │   │   │   └── batch.ts     # バッチ処理ロジック
-│   │   │   └── index.ts          # インデックスAPI統合
-│   │   │
-│   │   ├── storage/              # データ永続化
-│   │   │   ├── messages/         # メッセージストア
-│   │   │   │   └── repository.ts # メッセージCRUD
-│   │   │   ├── vectors/          # ベクトルストア
-│   │   │   │   └── sqlite-vec.ts # sqlite-vec操作
-│   │   │   ├── database.ts       # SQLite接続管理
-│   │   │   └── migrations/       # DBマイグレーション
-│   │   │       └── 001_initial.sql # 初期スキーマ
-│   │   │
-│   │   ├── config/               # 設定管理
-│   │   │   ├── loader.ts         # 設定読み込み
-│   │   │   ├── validator.ts      # 設定検証（zod）
-│   │   │   └── schema.ts         # 設定スキーマ定義
-│   │   │
-│   │   └── types/                # 共通型定義
-│   │       └── index.ts          # Message, SearchResult等
-│   │
-│   ├── package.json
-│   └── tsconfig.json
+src/
+├── search/               # 検索機能
+│   ├── semantic/         # セマンティック検索
+│   │   ├── embedder.ts  # 埋め込み生成
+│   │   └── searcher.ts  # ベクトル類似度検索
+│   ├── keyword/          # キーワード検索
+│   │   └── fts.ts       # FTS5全文検索
+│   ├── hybrid/           # ハイブリッド検索
+│   │   └── merger.ts    # 結果マージロジック
+│   └── index.ts          # 検索API統合
 │
-└── cli/                          # CLIパッケージ (@cchistory/cli)
-    ├── src/
-    │   ├── commands/             # コマンド実装
-    │   │   ├── search.ts         # 検索コマンド
-    │   │   ├── init.ts           # 初期化コマンド
-    │   │   └── config.ts         # 設定コマンド
-    │   │
-    │   ├── formatters/           # 出力フォーマッター
-    │   │   ├── search.ts         # 検索結果フォーマット
-    │   │   └── progress.ts       # 進捗表示（ora）
-    │   │
-    │   ├── interactive/          # 対話的UI
-    │   │   └── setup.ts          # セットアップウィザード
-    │   │
-    │   └── cli.ts               # CLIエントリーポイント
-    │
-    ├── bin/
-    │   └── cchistory             # 実行可能ファイル
-    ├── package.json
-    └── tsconfig.json
+├── indexing/             # インデックス作成機能
+│   ├── parser/           # データパーサー
+│   │   └── jsonl.ts     # jsonlファイル解析
+│   ├── embedder/         # 埋め込み生成
+│   │   └── openai.ts    # OpenAI API連携
+│   ├── builder/          # インデックスビルダー
+│   │   └── batch.ts     # バッチ処理ロジック
+│   └── index.ts          # インデックスAPI統合
+│
+├── storage/              # データ永続化
+│   ├── messages/         # メッセージストア
+│   │   └── repository.ts # メッセージCRUD
+│   ├── vectors/          # ベクトルストア
+│   │   └── sqlite-vec.ts # sqlite-vec操作
+│   ├── database.ts       # SQLite接続管理
+│   └── migrations/       # DBマイグレーション
+│       └── 001_initial.sql # 初期スキーマ
+│
+├── config/               # 設定管理
+│   ├── loader.ts         # 設定読み込み
+│   ├── validator.ts      # 設定検証（zod）
+│   └── schema.ts         # 設定スキーマ定義
+│
+├── commands/             # コマンド実装
+│   ├── search.ts         # 検索コマンド
+│   ├── init.ts           # 初期化コマンド
+│   └── config.ts         # 設定コマンド
+│
+├── formatters/           # 出力フォーマッター
+│   ├── search.ts         # 検索結果フォーマット
+│   └── progress.ts       # 進捗表示（ora）
+│
+├── interactive/          # 対話的UI
+│   └── setup.ts          # セットアップウィザード
+│
+├── types.ts              # 共通型定義 (Message, SearchResult等)
+│
+└── cli.ts               # CLIエントリーポイント
+
+bin/
+└── cchistory             # 実行可能ファイル
 ```
 
-### パッケージ間の依存関係
+### モジュール間の依存関係
 
-- `@cchistory/cli` → `@cchistory/core`: CLIがコア機能を利用
-- `@cchistory/core`: 外部依存なし（独立したビジネスロジック）
+- CLIコマンド → コア機能モジュール: コマンドがビジネスロジックを利用
+- 各機能モジュール: 明確な責務分離により循環依存を防止
 
-### 機能ベース・Monorepo構成の利点
+### シングルパッケージ構成の利点
 
-1. **明確な責務分離**
-   - 各機能が独立したモジュールとして管理される
-   - `core`はビジネスロジック、`cli`はユーザーインターフェースに専念
+1. **シンプルな管理**
+   - 単一のpackage.jsonで依存関係を管理
+   - バージョン管理が簡潔で、パッケージ間の互換性問題なし
+   - npmへの公開とインストールが単純
 
-2. **高い再利用性**
-   - coreパッケージを他のインターフェース（Web UI、REST API）でも利用可能
-   - 各機能モジュールを個別にインポート可能
+2. **開発速度の向上**
+   - モノレポツールの設定や学習コストが不要
+   - ビルドプロセスがシンプルで高速
+   - デバッグとテストが容易
 
-3. **優れたテスタビリティ**
-   - 機能単位でのユニットテストが容易
-   - CLIとコアロジックを分離してテスト可能
-   - 各機能モジュールの独立したモック化が可能
+3. **明確な責務分離**
+   - ディレクトリ構造で機能を分離
+   - 各モジュールは独立したディレクトリで管理
+   - インポートパスが直感的
 
-4. **拡張性と保守性**
-   - 新機能追加時は該当機能ディレクトリに追加するだけ
-   - 既存機能への影響を最小限に抑制
-   - 依存関係が明確で理解しやすい
+4. **デプロイの簡素化**
+   - 単一パッケージの公開で全機能が利用可能
+   - ユーザーは1つのパッケージをインストールするだけ
+   - 依存関係の解決が単純
 
-5. **開発効率の向上**
-   - 複数開発者が異なる機能を並行開発可能
-   - 機能ごとのビルド・テストが可能
-   - CI/CDでの並列処理が容易
+5. **保守性の向上**
+   - コードベース全体を一箇所で管理
+   - リファクタリングが容易
+   - 統一されたツールチェーン
 
 ## 主要インターフェース定義
 
 ```typescript
-// types/index.ts
+// types.ts
 
 export interface Message {
   id: string;
@@ -192,7 +184,7 @@ export interface SearchResult {
 ```sql
 -- メッセージテーブル
 CREATE TABLE messages (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    id TEXT PRIMARY KEY,
     session_id TEXT NOT NULL,
     project_name TEXT NOT NULL,
     message_uuid TEXT UNIQUE NOT NULL,
@@ -206,7 +198,7 @@ CREATE TABLE messages (
 
 -- ベクトルテーブル（sqlite-vec）
 CREATE VIRTUAL TABLE message_vectors USING vec0(
-    message_id INTEGER PRIMARY KEY,
+    message_id TEXT PRIMARY KEY,
     embedding FLOAT[1536]
 );
 
@@ -222,28 +214,17 @@ CREATE INDEX idx_messages_project_timestamp ON messages(project_name, timestamp)
 CREATE INDEX idx_messages_type ON messages(type);
 
 -- TypeScript型定義
-export interface Message {
-  id: number;
-  sessionId: string;
-  projectName: string;
-  messageUuid: string;
-  parentUuid?: string;
-  type: 'user' | 'assistant' | 'summary';
-  role?: string;
-  content: string;
-  timestamp: Date;
-  createdAt: Date;
-}
+// Message型定義は上記のインターフェース定義と同じ
 
 // better-sqlite3での型安全なクエリ例
-const insertStmt = db.prepare<Message[]>(`
+const insertStmt = db.prepare(`
   INSERT INTO messages (
     session_id, project_name, message_uuid, parent_uuid,
     type, role, content, timestamp
   ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)
 `);
 
-const searchStmt = db.prepare<[string, number, number], SearchResult>(`
+const searchStmt = db.prepare(`
   SELECT 
     m.*,
     vec_distance(mv.embedding, ?) as distance
@@ -281,8 +262,8 @@ const searchStmt = db.prepare<[string, number, number], SearchResult>(`
 1. `~/.claude/projects`配下のjsonlファイルをスキャン
 2. 各ファイルを行単位で読み込み
 3. メッセージを100件ずつバッチ化
-4. OpenAI APIで埋め込みベクトルを生成
-5. SQLiteにトランザクションで保存
+4. indexing/embedder/openai.tsでOpenAI APIを使用して埋め込みベクトルを生成
+5. storage/database.tsとstorage/messages/repository.tsを使用してSQLiteにトランザクションで保存
 6. 進捗をプログレスバーで表示
 
 #### パフォーマンス考慮
@@ -312,7 +293,7 @@ API key saved to ~/.claude/cchistory/config.yml
 
 #### 検索の全体フロー
 1. CLIが検索クエリとオプションを受け取る
-2. SearchServiceが検索モード（semantic/keyword/hybrid）を判定
+2. search/index.tsのSearchServiceが検索モード（semantic/keyword/hybrid）を判定
 3. 各検索戦略に応じた処理を実行
    - **セマンティック検索**: クエリをベクトル化し、コサイン類似度で検索
    - **キーワード検索**: SQLiteのFTS5を使用して全文検索
@@ -455,7 +436,7 @@ Assistant: {"category": "feedback", "confidence": 0.85...}
 
 1. **データベース基盤**
    - SQLite + sqlite-vec初期化
-   - Drizzle ORMのセットアップ
+   - better-sqlite3のセットアップ
    - スキーマ定義と初期マイグレーション
    - 基本的なCRUD操作
 
@@ -463,7 +444,7 @@ Assistant: {"category": "feedback", "confidence": 0.85...}
    - jsonlファイル読み込み
    - OpenAI API連携
    - バッチ処理とプログレス表示
-   - Drizzleを使用したデータ永続化
+   - better-sqlite3を使用したデータ永続化
 
 3. **検索機能**
    - キーワード検索（FTS5）
@@ -513,8 +494,6 @@ Assistant: {"category": "feedback", "confidence": 0.85...}
     "lint": "eslint src",
     "format": "prettier --write src",
     "clean": "rm -rf dist",
-    "db:generate": "drizzle-kit generate:sqlite",
-    "db:push": "drizzle-kit push:sqlite",
     "prepublishOnly": "pnpm build"
   },
   "dependencies": {
@@ -528,17 +507,15 @@ Assistant: {"category": "feedback", "confidence": 0.85...}
     "zod": "^3.22.0",
     "yaml": "^2.3.0",
     "p-limit": "^5.0.0",
-    "drizzle-orm": "^0.29.0"
   },
   "devDependencies": {
     "typescript": "^5.0.0",
-    "prettier": "^3.0.0",
-    "eslint": "^8.0.0",
+    "@biomejs/biome": "^2.1.2",
+    "oxlint": "^1.8.0",
     "vitest": "^1.0.0",
     "@types/node": "^20.0.0",
     "@types/better-sqlite3": "^7.0.0",
     "tsx": "^4.0.0",
-    "drizzle-kit": "^0.20.0"
   },
   "files": [
     "dist",
@@ -599,9 +576,9 @@ Assistant: {"category": "feedback", "confidence": 0.85...}
 3. **データベース初期化**
    - ディレクトリ作成
    - SQLiteデータベース作成
-   - Drizzleマイグレーションの適用
-   - sqlite-vec拡張の手動作成
-   - FTS5インデックスの手動作成
+   - SQLマイグレーションの適用
+   - sqlite-vec拡張のロード
+   - FTS5仮想テーブルの作成
 
 4. **初回インデックス作成**
    - Claude Code履歴の検出
@@ -617,7 +594,7 @@ Assistant: {"category": "feedback", "confidence": 0.85...}
      ```
    - **初回実行時の制限**:
      - デフォルト: 直近7日間のメッセージのみ
-     - または: 最大10,000メッセージまで
+     - 最大10,000メッセージまでの制限あり
      - `--all`オプションで全データ処理可能
    - インデックス作成の確認プロンプト
    - 実行時は進捗バーで状況表示
@@ -670,7 +647,7 @@ Assistant: {"category": "feedback", "confidence": 0.85...}
 ### 設定の階層と優先順位
 1. **デフォルト設定**: ハードコードされた初期値
 2. **設定ファイル**: `~/.claude/cchistory/config.yml`
-3. **環境変数**: CCHISTORY_で始まる環境変数
+3. **環境変数**: OPENAI_API_KEYなど特定の環境変数
 4. **コマンドラインオプション**: 実行時の引数
 
 ### APIキー管理
@@ -683,7 +660,7 @@ Assistant: {"category": "feedback", "confidence": 0.85...}
 
 #### APIキー取得の流れ
 1. 環境変数`OPENAI_API_KEY`をチェック
-2. 設定ファイルの暗号化されたキーをチェック
+2. 設定ファイルのapi.openai_keyをチェック
 3. どちらも無い場合は対話的入力を要求
 4. 入力されたキーを検証（OpenAI APIにテスト接続）
 5. 設定ファイルに保存（パーミッション600）
@@ -694,10 +671,10 @@ Assistant: {"category": "feedback", "confidence": 0.85...}
 
 #### データベース初期化
 - SQLiteデータベースファイルを`~/.claude/cchistory/db/`に作成
-- Drizzleマイグレーションを自動適用（messagesテーブル等）
+- SQLスキーマを適用（messagesテーブル等）
 - sqlite-vec拡張をロードしてベクトル検索機能を有効化
-- message_vectorsテーブルを手動作成（sqlite-vec用）
-- messages_ftsテーブルを手動作成（FTS5用）
+- message_vectors仮想テーブルを作成（sqlite-vec用）
+- messages_fts仮想テーブルを作成（FTS5用）
 - WALモードを有効化して読み書きの並行性を向上
 
 #### ベクトル検索の仕組み
@@ -732,27 +709,27 @@ Assistant: {"category": "feedback", "confidence": 0.85...}
 
 ### データベースマイグレーション管理
 
-#### Drizzle-kitによる自動マイグレーション
-- スキーマ変更時に`pnpm db:generate`でマイグレーションファイル生成
-- 初回起動時に自動的にマイグレーション適用
-- マイグレーション履歴は`drizzle`メタテーブルで管理
+#### SQLiteマイグレーション管理
+- マイグレーションSQLファイルをmigrations/ディレクトリに配置
+- 初回起動時にSQLファイルを実行してスキーマを作成
+- バージョン管理テーブルで適用済みマイグレーションを追跡
 
 #### マイグレーション戦略
-1. **開発環境**: `pnpm db:push`で即座に適用
+1. **開発環境**: SQLファイルを直接実行
 2. **本番環境**: 起動時に未適用のマイグレーションを検出・実行
 3. **バージョン管理**: migrations/ディレクトリをGit管理
 
 #### 特殊テーブルの扱い
-- **sqlite-vec（ベクトル）**: 初回起動時に手動作成
-- **FTS5（全文検索）**: 初回起動時に手動作成
-- **通常テーブル**: Drizzleで完全管理
+- **sqlite-vec（ベクトル）**: 拡張ロード後に仮想テーブル作成
+- **FTS5（全文検索）**: 仮想テーブルとして作成
+- **通常テーブル**: SQLファイルで定義
 
 ## 開発環境のセットアップ
 
 ### 必要な環境
 
 #### 開発環境
-- Node.js v22以上 (最新LTS推奨)
+- Node.js v18以上 (v22推奨)
 - pnpm v9以上 (最新版推奨)
 - macOS / Linux / Windows (WSL2)
 

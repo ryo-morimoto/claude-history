@@ -5,7 +5,7 @@ v2.0はv1.0の基盤の上に、生産性を向上させる高度な機能を追
 
 ## v2.0で追加される外部依存ライブラリ
 
-（v1.0の依存関係に追加なし。drizzle-orm、p-limitはv1.0に含まれています）
+（v1.0の依存関係に追加なし。p-limitはv1.0に含まれています）
 
 ## v2.0で追加されるモジュール
 
@@ -32,7 +32,7 @@ src/
 ## v2.0で追加される主要インターフェース
 
 ```typescript
-// v1.0のインターフェースに追加
+// v1.0のインターフェースに追加 (types.ts)
 
 export interface SearchOptions {
   // v1.0の項目に追加
@@ -168,36 +168,13 @@ cchistory sync --force
 
 ### 4. v2.0テーブルのマイグレーション
 
-v1.0からDrizzle ORMを使用しているため、v2.0の新テーブル追加は通常のマイグレーションとして実装します。
+v2.0の新テーブル追加はSQLマイグレーションファイルとして実装します。
 
-#### v2.0で追加されるスキーマ定義
-```typescript
-// storage/schema/search-history.ts
-import { sqliteTable, text, integer, index } from 'drizzle-orm/sqlite-core';
-import { sql } from 'drizzle-orm';
-
-export const searchHistory = sqliteTable('search_history', {
-  id: integer('id').primaryKey({ autoIncrement: true }),
-  query: text('query').notNull(),
-  mode: text('mode').notNull(),
-  options: text('options'), // JSON形式
-  resultCount: integer('result_count').notNull(),
-  executionTimeMs: integer('execution_time_ms'),
-  embeddingModel: text('embedding_model'),
-  errorMessage: text('error_message'),
-  executedAt: integer('executed_at', { mode: 'timestamp' })
-    .notNull()
-    .default(sql`CURRENT_TIMESTAMP`)
-}, (table) => ({
-  executedAtIdx: index('idx_search_history_executed_at').on(table.executedAt),
-  queryIdx: index('idx_search_history_query').on(table.query)
-}));
-
-export const syncState = sqliteTable('sync_state', {
-  projectName: text('project_name').primaryKey(),
-  lastSyncAt: integer('last_sync_at', { mode: 'timestamp' }).notNull(),
-  lastFileCount: integer('last_file_count')
-});
+#### v2.0で追加されるマイグレーション
+```sql
+-- migrations/002_v2_features.sql
+-- 検索履歴テーブルと同期状態テーブルの追加
+-- (上記のv2.0データベーステーブル定義を参照)
 ```
 
 ## v2.0の設定ファイル拡張
@@ -245,7 +222,7 @@ exclude:
 
 ### データベース移行
 1. v1のデータベースをバックアップ
-2. Drizzleマイグレーションで新テーブル追加
+2. SQLマイグレーションで新テーブル追加
 3. 既存データはそのまま利用可能
 
 ### 設定ファイル移行
@@ -260,10 +237,10 @@ exclude:
 
 ## 実装優先順位
 
-1. **Drizzle ORM統合**
-   - スキーマ定義
-   - マイグレーション設定
-   - 既存コードの移行
+1. **データベーススキーマ拡張**
+   - SQLマイグレーションファイル作成
+   - v2.0テーブルの追加
+   - マイグレーション適用ロジック
 
 2. **検索履歴機能**
    - データ保存ロジック
@@ -295,7 +272,7 @@ exclude:
 ## リリース計画
 
 ### v2.0-beta
-- Drizzle ORM統合
+- データベース拡張
 - 検索履歴機能
 - 限定ユーザーでテスト
 

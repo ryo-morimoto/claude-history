@@ -1,1 +1,2 @@
-- [ ] 型定義について手を入れる /types/ じゃなくて types.ts で管理しきれそう
+- [x] 型定義について手を入れる /types/ じゃなくて types.ts で管理しきれそう
+- [x] 依存関係のversionを最新の状態にする, packageMangerのversionも最新にする

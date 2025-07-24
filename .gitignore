@@ -1,0 +1,49 @@
+# Dependencies
+node_modules/
+.pnpm-debug.log*
+
+# Build outputs
+dist/
+*.tsbuildinfo
+.tsdown/
+
+# Test coverage
+coverage/
+.nyc_output/
+
+# Environment files
+.env
+.env.local
+.env.*.local
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.DS_Store
+
+# Debug logs
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+# OS files
+Thumbs.db
+
+# Database files
+*.db
+*.sqlite
+*.sqlite3
+~/.claude/cchistory/
+
+# Temporary files
+*.tmp
+*.temp
+.cache/
+
+# Lock files (only commit pnpm-lock.yaml)
+package-lock.json
+yarn.lock

@@ -1,0 +1,52 @@
+{
+  "$schema": "./node_modules/oxlint/configuration_schema.json",
+  "env": {
+    "node": true,
+    "es2022": true
+  },
+  "ignorePatterns": [
+    "node_modules",
+    "dist",
+    "coverage",
+    "*.min.js",
+    "*.d.ts",
+    ".turbo"
+  ],
+  "rules": {
+    "no-unused-vars": "error",
+    "no-undef": "error",
+    "no-console": "warn",
+    "no-debugger": "error",
+    "no-empty": "error",
+    "no-empty-function": "error",
+    "no-duplicate-imports": "error",
+    "no-unused-expressions": "error",
+    "no-var": "error",
+    "prefer-const": "error",
+    "prefer-arrow-callback": "error",
+    "prefer-template": "error",
+    "arrow-body-style": ["error", "as-needed"],
+    "consistent-return": "error",
+    "curly": "error",
+    "default-case": "error",
+    "eqeqeq": ["error", "always"],
+    "no-alert": "error",
+    "no-eval": "error",
+    "no-implied-eval": "error",
+    "no-return-await": "error",
+    "no-script-url": "error",
+    "no-self-compare": "error",
+    "no-sequences": "error",
+    "no-throw-literal": "error",
+    "no-unmodified-loop-condition": "error",
+    "no-useless-call": "error",
+    "no-useless-concat": "error",
+    "no-useless-return": "error",
+    "no-void": "error",
+    "no-with": "error",
+    "prefer-promise-reject-errors": "error",
+    "radix": "error",
+    "require-await": "error",
+    "yoda": "error"
+  }
+}
