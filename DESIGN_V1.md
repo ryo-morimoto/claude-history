@@ -57,7 +57,7 @@ v1.0（MVP）はAIを活用したセマンティック検索を含む最小限�
 
 ```
 packages/
-├── @cchistory/core/              # コア機能パッケージ
+├── core/                         # コア機能パッケージ (@cchistory/core)
 │   ├── src/
 │   │   ├── search/               # 検索機能
 │   │   │   ├── semantic/         # セマンティック検索
@@ -98,15 +98,12 @@ packages/
 │   ├── package.json
 │   └── tsconfig.json
 │
-└── @cchistory/cli/               # CLIパッケージ
+└── cli/                          # CLIパッケージ (@cchistory/cli)
     ├── src/
     │   ├── commands/             # コマンド実装
-    │   │   ├── search/           # 検索コマンド
-    │   │   │   └── index.ts      # 検索実行・オプション処理
-    │   │   ├── init/             # 初期化コマンド
-    │   │   │   └── index.ts      # DB初期化・インデックス作成
-    │   │   └── config/           # 設定コマンド
-    │   │       └── index.ts      # APIキー設定等
+    │   │   ├── search.ts         # 検索コマンド
+    │   │   ├── init.ts           # 初期化コマンド
+    │   │   └── config.ts         # 設定コマンド
     │   │
     │   ├── formatters/           # 出力フォーマッター
     │   │   ├── search.ts         # 検索結果フォーマット
@@ -497,30 +494,41 @@ Assistant: {"category": "feedback", "confidence": 0.85...}
 
 ## パッケージ構成
 
-### pnpm-workspace.yaml（pnpm Monorepo設定）
-
-```yaml
-packages:
-  - 'packages/*'
-```
-
-### ルートpackage.json
+### package.json
 
 ```json
 {
-  "name": "cchistory-monorepo",
+  "name": "cchistory",
   "version": "1.0.0",
-  "private": true,
+  "description": "AI-powered semantic search for Claude Code conversation history",
   "type": "module",
+  "main": "./dist/cli.js",
+  "bin": {
+    "cchistory": "./bin/cchistory"
+  },
   "scripts": {
-    "build": "pnpm -r build",
-    "test": "pnpm -r test",
-    "lint": "pnpm -r lint",
-    "format": "prettier --write packages",
-    "clean": "pnpm -r clean",
-    "dev": "pnpm --filter @cchistory/cli dev",
-    "db:generate": "drizzle-kit generate:sqlite --config=packages/core/drizzle.config.ts",
-    "db:push": "drizzle-kit push:sqlite --config=packages/core/drizzle.config.ts"
+    "build": "tsc",
+    "dev": "tsx src/cli.ts",
+    "test": "vitest",
+    "lint": "eslint src",
+    "format": "prettier --write src",
+    "clean": "rm -rf dist",
+    "db:generate": "drizzle-kit generate:sqlite",
+    "db:push": "drizzle-kit push:sqlite",
+    "prepublishOnly": "pnpm build"
+  },
+  "dependencies": {
+    "@vercel/ai": "^3.0.0",
+    "better-sqlite3": "^9.0.0",
+    "sqlite-vec": "^0.1.0",
+    "commander": "^11.0.0",
+    "chalk": "^5.3.0",
+    "ora": "^7.0.0",
+    "inquirer": "^9.0.0",
+    "zod": "^3.22.0",
+    "yaml": "^2.3.0",
+    "p-limit": "^5.0.0",
+    "drizzle-orm": "^0.29.0"
   },
   "devDependencies": {
     "typescript": "^5.0.0",
@@ -532,58 +540,32 @@ packages:
     "tsx": "^4.0.0",
     "drizzle-kit": "^0.20.0"
   },
-  "packageManager": "pnpm@8.15.0"
-}
-```
-
-### @cchistory/core/package.json
-
-```json
-{
-  "name": "@cchistory/core",
-  "version": "1.0.0",
-  "type": "module",
-  "main": "./dist/index.js",
-  "types": "./dist/index.d.ts",
-  "scripts": {
-    "build": "tsc",
-    "test": "vitest",
-    "lint": "eslint src"
+  "files": [
+    "dist",
+    "bin"
+  ],
+  "keywords": [
+    "claude",
+    "claude-code",
+    "search",
+    "semantic-search",
+    "cli",
+    "ai"
+  ],
+  "author": "Your Name",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/yourusername/cchistory.git"
   },
-  "dependencies": {
-    "@vercel/ai": "^3.0.0",
-    "better-sqlite3": "^9.0.0",
-    "sqlite-vec": "^0.1.0",
-    "zod": "^3.22.0",
-    "yaml": "^2.3.0",
-    "p-limit": "^5.0.0"
-  }
-}
-```
-
-### @cchistory/cli/package.json
-
-```json
-{
-  "name": "@cchistory/cli",
-  "version": "1.0.0",
-  "type": "module",
-  "bin": {
-    "cchistory": "./bin/cchistory"
+  "bugs": {
+    "url": "https://github.com/yourusername/cchistory/issues"
   },
-  "scripts": {
-    "build": "tsc",
-    "dev": "tsx src/cli.ts",
-    "test": "vitest",
-    "lint": "eslint src"
+  "homepage": "https://github.com/yourusername/cchistory#readme",
+  "engines": {
+    "node": ">=18.0.0"
   },
-  "dependencies": {
-    "@cchistory/core": "workspace:^",
-    "commander": "^11.0.0",
-    "chalk": "^5.3.0",
-    "ora": "^7.0.0",
-    "inquirer": "^9.0.0"
-  }
+  "packageManager": "pnpm@9.15.0"
 }
 ```
 
@@ -768,15 +750,25 @@ packages:
 ## 開発環境のセットアップ
 
 ### 必要な環境
-- Node.js v18以上
-- pnpm v8以上
+
+#### 開発環境
+- Node.js v22以上 (最新LTS推奨)
+- pnpm v9以上 (最新版推奨)
 - macOS / Linux / Windows (WSL2)
+
+#### 動作環境 (エンドユーザー)
+- Node.js v18以上
+- npm/yarn/pnpm いずれか (インストール用)
 
 ### 初期セットアップ
 ```bash
 # リポジトリのクローン
 git clone https://github.com/username/cchistory.git
 cd cchistory
+
+# pnpmのインストール (未インストールの場合)
+corepack enable
+corepack prepare pnpm@latest --activate
 
 # 依存関係のインストール
 pnpm install
@@ -803,18 +795,21 @@ pnpm lint
 
 ### パッケージ公開
 
-内部ではpnpm workspaceを使用して開発しますが、ユーザー向けには通常のnpmパッケージとして公開します：
-
 ```bash
 # ビルド
 pnpm build
 
-# パッケージ公開（@cchistory/cliのみ）
-cd packages/cli
-npm publish --access public
+# テスト実行
+pnpm test
+
+# パッケージ公開
+pnpm publish --access public
 ```
 
-ユーザーは以下の方法でインストール可能：
+### エンドユーザーのインストール方法
+
+ユーザーは以下のいずれかの方法でインストール可能：
 - `npm install -g cchistory`
 - `npx cchistory`
 - `yarn global add cchistory`
+- `pnpm add -g cchistory`

@@ -9,29 +9,24 @@ v2.0はv1.0の基盤の上に、生産性を向上させる高度な機能を追
 
 ## v2.0で追加されるモジュール
 
-v1.0のMonorepo構成（DESIGN_V1.md参照）に以下を追加：
+v1.0の単一パッケージ構成（DESIGN_V1.md参照）に以下を追加：
 
 ```
-packages/
-├── @cchistory/core/
-│   └── src/
-│       ├── search/
-│       │   └── history/         # 検索履歴機能（v2.0新機能）
-│       │       ├── service.ts   # 履歴管理サービス
-│       │       └── repository.ts # 履歴データアクセス
-│       ├── sync/                # 同期機能（v2.0新機能）
-│       │   ├── service.ts       # 差分同期サービス
-│       │   └── detector.ts      # 変更検出
-│       └── filters/             # 除外フィルタ（v2.0新機能）
-│           └── exclude.ts       # 除外ロジック
-│
-└── @cchistory/cli/
-    └── src/
-        └── commands/
-            ├── sync/            # syncコマンド（v2.0新機能）
-            │   └── index.ts
-            └── history/         # historyコマンド（v2.0新機能）
-                └── index.ts
+src/
+├── search/
+│   └── history/             # 検索履歴機能（v2.0新機能）
+│       ├── service.ts       # 履歴管理サービス
+│       └── repository.ts    # 履歴データアクセス
+├── sync/                    # 同期機能（v2.0新機能）
+│   ├── service.ts          # 差分同期サービス
+│   └── detector.ts         # 変更検出
+├── filters/                 # 除外フィルタ（v2.0新機能）
+│   └── exclude.ts          # 除外ロジック
+└── commands/
+    ├── sync/               # syncコマンド（v2.0新機能）
+    │   └── index.ts
+    └── history/            # historyコマンド（v2.0新機能）
+        └── index.ts
 ```
 
 ## v2.0で追加される主要インターフェース
@@ -443,7 +438,7 @@ Run 'cchistory init' to reconfigure your API key.
 
 ## パッケージ構成
 
-v2.0では追加の依存関係はありません。パッケージ構成の詳細についてはDESIGN_V1.mdを参照してください。
+v2.0では追加の依存関係はありません。単一パッケージ構成を継続します。パッケージ構成の詳細についてはDESIGN_V1.mdを参照してください。
 
 ## 段階的リリース戦略
 
