@@ -22,6 +22,7 @@
     "dev:search": "NODE_ENV=development tsx src/cli.ts search",
     "clean": "rm -rf dist coverage .turbo",
     "typecheck": "tsc --noEmit",
+    "typecheck:fast": "tsgo --noEmit",
     "lint": "pnpm run lint:oxlint && pnpm run lint:biome",
     "lint:oxlint": "oxlint src",
     "lint:biome": "biome check src",
@@ -33,30 +34,35 @@
     "test:coverage": "vitest run --coverage",
     "check": "pnpm run typecheck && pnpm run lint && pnpm run format:check",
     "check:fix": "pnpm run lint:fix && pnpm run format",
+    "prepare": "lefthook install",
     "prepublishOnly": "pnpm run clean && pnpm run check && pnpm run build && pnpm run build:tsc --declaration --emitDeclarationOnly --outDir dist/types"
   },
   "dependencies": {
     "ai": "^4.3.19",
     "better-sqlite3": "^12.2.0",
-    "sqlite-vec": "^0.1.7-alpha.2",
-    "commander": "^14.0.0",
     "chalk": "^5.4.1",
-    "ora": "^8.2.0",
+    "commander": "^14.0.0",
     "inquirer": "^12.8.2",
-    "zod": "^4.0.5",
-    "yaml": "^2.8.0",
+    "neverthrow": "^8.1.1",
+    "ora": "^8.2.0",
     "p-limit": "^6.2.0",
-    "neverthrow": "^8.1.1"
+    "sqlite-vec": "^0.1.7-alpha.2",
+    "yaml": "^2.8.0",
+    "zod": "^4.0.5"
   },
   "devDependencies": {
-    "typescript": "^5.8.3",
     "@biomejs/biome": "^2.1.2",
-    "oxlint": "^1.8.0",
-    "vitest": "^3.2.4",
-    "@types/node": "^24.1.0",
+    "@commitlint/cli": "^19.8.1",
+    "@commitlint/config-conventional": "^19.8.1",
     "@types/better-sqlite3": "^7.6.13",
+    "@types/node": "^24.1.0",
+    "@typescript/native-preview": "7.0.0-dev.20250724.1",
+    "lefthook": "^1.12.2",
+    "oxlint": "^1.8.0",
+    "tsdown": "^0.12.9",
     "tsx": "^4.20.3",
-    "tsdown": "^0.12.9"
+    "typescript": "^5.8.3",
+    "vitest": "^3.2.4"
   },
   "files": [
     "dist"

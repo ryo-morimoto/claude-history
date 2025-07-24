@@ -47,3 +47,5 @@ Thumbs.db
 # Lock files (only commit pnpm-lock.yaml)
 package-lock.json
 yarn.lock
+# Lefthook
+lefthook-local.yml

@@ -1,0 +1,34 @@
+# Lefthook configuration
+# https://github.com/evilmartians/lefthook
+
+pre-commit:
+  parallel: true
+  commands:
+    typecheck:
+      glob: "*.{ts,tsx}"
+      run: pnpm run typecheck:fast
+      
+    lint:
+      glob: "*.{ts,tsx,js,jsx}"
+      run: pnpm run lint
+      
+    format-check:
+      glob: "*.{ts,tsx,js,jsx,json,md,yml,yaml}"
+      run: pnpm run format:check
+
+pre-push:
+  parallel: true
+  commands:
+    test:
+      run: pnpm run test
+      
+    typecheck-full:
+      run: pnpm run typecheck
+      
+    build:
+      run: pnpm run build
+
+commit-msg:
+  commands:
+    commitlint:
+      run: pnpm exec commitlint --edit $1

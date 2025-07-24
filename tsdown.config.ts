@@ -1,27 +1,27 @@
-import { defineConfig } from 'tsdown';
+import { defineConfig } from "tsdown";
 
 export default defineConfig({
-  entry: './src/cli.ts',
-  format: ['esm'],
+  entry: "./src/cli.ts",
+  format: ["esm"],
   dts: true,
   clean: true,
-  platform: 'node',
-  target: 'node18',
+  platform: "node",
+  target: "node18",
   external: [
     // Native modules that should not be bundled
-    'better-sqlite3',
-    'sqlite-vec',
+    "better-sqlite3",
+    "sqlite-vec",
   ],
   define: {
-    'import.meta.vitest': 'undefined',
+    "import.meta.vitest": "undefined",
   },
   env: {
-    NODE_ENV: 'production',
+    NODE_ENV: "production",
   },
-  outDir: 'dist',
+  outDir: "dist",
   sourcemap: true,
   // Keep the shebang for CLI executable
   banner: {
-    js: '#!/usr/bin/env node',
+    js: "#!/usr/bin/env node",
   },
 });

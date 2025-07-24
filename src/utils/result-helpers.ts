@@ -1,8 +1,8 @@
 /**
  * Helper functions for working with Result types
  */
-import { Result, ResultAsync, ok, err } from 'neverthrow';
-import type { AppError } from '../error.js';
+import { err, ok, type Result, ResultAsync } from "neverthrow";
+import type { AppError } from "../error.js";
 
 /**
  * Wraps a synchronous function that might throw into a Result
@@ -37,8 +37,8 @@ export function combineResults<T, E>(results: Result<T, E>[]): Result<T[], E> {
   if (errors.length > 0) {
     return errors[0] as Result<never, E>;
   }
-  
-  const values = results.map((r) => (r as Result<T, never>).value);
+
+  const values = results.map((r) => r._unsafeUnwrap());
   return ok(values);
 }
 
@@ -47,8 +47,10 @@ export function combineResults<T, E>(results: Result<T, E>[]): Result<T[], E> {
  */
 export function logError<E>(error: E, context?: string): Result<never, E> {
   if (context) {
+    // eslint-disable-next-line no-console
     console.error(`[${context}]`, error);
   } else {
+    // eslint-disable-next-line no-console
     console.error(error);
   }
   return err(error);
